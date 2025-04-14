@@ -1,0 +1,25 @@
+# Environment variables
+.env
+
+# Composer dependencies
+/vendor/
+
+# Node modules
+/node_modules/
+
+# IDE files
+.idea/
+.vscode/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+
