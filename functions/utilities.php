@@ -20,6 +20,24 @@ function getAverageRating($productId, $conn) {
     return round($row['average'] ?? 0, 1);
 }
 
+function isAdmin() {
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+}
+
+function logUserActivity($userId, $action, $description = '') {
+    global $conn;
+
+    $userId = intval($userId);
+    $action = mysqli_real_escape_string($conn, $action);
+    $description = mysqli_real_escape_string($conn, $description);
+
+    $query = "INSERT INTO user_logs (user_id, action, description, created_at) 
+              VALUES ($userId, '$action', '$description', NOW())";
+
+    $conn->query($query);
+}
+
+
 // Function to check if user is logged in
 function isLoggedIn() {
     return isset($_SESSION['user_id']);

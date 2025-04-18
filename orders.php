@@ -1,151 +1,184 @@
 <?php
-// Start session
 session_start();
+require_once 'config/database.php';
+require_once 'functions/utilities.php';
 
-// Check if user is logged in
-if (!isset($_SESSION['user_id'])) {
-    // Redirect to login page if not logged in
-    header("Location: login.php");
-    exit();
+// Cek login
+if (!isLoggedIn()) {
+    redirectWithMessage('login.php', 'Please login to view your orders', 'info');
 }
 
-// Replace the database connection section with:
-// Database connection
-$host = 'localhost'; // or '127.0.0.1' instead of 'db'
-$port = '3307'; // Port specified in docker-compose.yml
-$dbname = 'shoppet_db';
-$username = 'shoppet_user';
-$password = 'shoppet_password';
-
-try {
-    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    die("Database connection failed: " . $e->getMessage());
-}
-
-// Get user ID from session
 $user_id = $_SESSION['user_id'];
 
-// Fetch orders for the current user
-$stmt = $pdo->prepare("
-    SELECT o.*, 
-           COUNT(oi.order_item_id) as item_count,
-           SUM(oi.quantity * oi.price) as total_amount
-    FROM orders o
-    LEFT JOIN order_items oi ON o.order_id = oi.order_id
-    WHERE o.user_id = :user_id
-    GROUP BY o.order_id
-    ORDER BY o.order_date DESC
-");
-$stmt->bindParam(':user_id', $user_id, PDO::PARAM_INT);
-$stmt->execute();
-$orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+function getOrderStatusBadgeClass($status) {
+    switch ($status) {
+        case 'pending':
+            return 'bg-warning text-dark';
+        case 'processing':
+            return 'bg-info text-dark';
+        case 'shipped':
+            return 'bg-primary';
+        case 'delivered':
+            return 'bg-success';
+        case 'cancelled':
+            return 'bg-danger';
+        default:
+            return 'bg-secondary';
+    }
+}
 
-// Page title
-$pageTitle = "My Orders";
+// Ambil semua pesanan user
+$ordersQuery = "SELECT * FROM orders WHERE user_id = $user_id ORDER BY created_at DESC";
+$ordersResult = $conn->query($ordersQuery);
+$orders = $ordersResult->fetch_all(MYSQLI_ASSOC);
+
+// Optional: pastikan function getCartItemCount() dan isLoggedIn() tersedia sebelum header dipanggil
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>My Orders - ShopPet</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ShopPet - <?php echo $pageTitle; ?></title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Custom CSS -->
+    
+    <!-- Bootstrap & Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Style tambahan jika ada -->
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-    <!-- Include header/navigation -->
-    <?php include 'includes/header.php'; ?>
 
-    <div class="container py-5">
-        <h1 class="mb-4"><?php echo $pageTitle; ?></h1>
-        
-        <?php if (empty($orders)): ?>
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i> You haven't placed any orders yet.
-                <a href="index.php" class="alert-link">Continue shopping</a>
-            </div>
-        <?php else: ?>
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Order #</th>
-                                    <th>Date</th>
-                                    <th>Items</th>
-                                    <th>Total</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($orders as $order): ?>
-                                    <tr>
-                                        <td>#<?php echo $order['order_id']; ?></td>
-                                        <td><?php echo date('M d, Y', strtotime($order['order_date'])); ?></td>
-                                        <td><?php echo $order['item_count']; ?> item(s)</td>
-                                        <td class="price">$<?php echo number_format($order['total_amount'], 2); ?></td>
-                                        <td>
-                                            <?php 
-                                            switch($order['status']) {
-                                                case 'pending':
-                                                    echo '<span class="badge bg-warning text-dark">Pending</span>';
-                                                    break;
-                                                case 'processing':
-                                                    echo '<span class="badge bg-info text-dark">Processing</span>';
-                                                    break;
-                                                case 'shipped':
-                                                    echo '<span class="badge bg-primary">Shipped</span>';
-                                                    break;
-                                                case 'delivered':
-                                                    echo '<span class="badge bg-success">Delivered</span>';
-                                                    break;
-                                                case 'cancelled':
-                                                    echo '<span class="badge bg-danger">Cancelled</span>';
-                                                    break;
-                                                default:
-                                                    echo '<span class="badge bg-secondary">Unknown</span>';
-                                            }
-                                            ?>
-                                        </td>
-                                        <td>
-                                            <a href="order-details.php?id=<?php echo $order['order_id']; ?>" class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-eye"></i> View Details
-                                            </a>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
+<header>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="index.php">
+                <i class="fas fa-paw me-2 text-primary"></i>
+                ShopPet
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.php">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="products.php">Products</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Categories
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item" href="products.php?category=dogs">Dogs</a></li>
+                            <li><a class="dropdown-item" href="products.php?category=cats">Cats</a></li>
+                            <li><a class="dropdown-item" href="products.php?category=birds">Birds</a></li>
+                            <li><a class="dropdown-item" href="products.php?category=fish">Fish</a></li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <div class="d-flex align-items-center">
+                    <form class="d-flex me-2" action="search.php" method="GET">
+                        <input class="form-control me-2" type="search" name="query" placeholder="Search" aria-label="Search">
+                        <button class="btn btn-outline-primary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                    
+                    <a href="cart.php" class="btn btn-outline-primary position-relative me-2">
+                        <i class="fas fa-shopping-cart"></i>
+                        <?php if (function_exists('getCartItemCount') && getCartItemCount() > 0): ?>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            <?php echo getCartItemCount(); ?>
+                        </span>
+                        <?php endif; ?>
+                    </a>
+                    
+                    <?php if (isLoggedIn()): ?>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="profile.php">My Profile</a></li>
+                                <li><a class="dropdown-item" href="orders.php">My Orders</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="logout.php">Logout</a></li>
+                            </ul>
+                        </div>
+                    <?php else: ?>
+                        <a href="login.php" class="btn btn-outline-secondary me-2">Login</a>
+                        <a href="register.php" class="btn btn-primary">Register</a>
+                    <?php endif; ?>
                 </div>
             </div>
-            
-            <div class="d-flex justify-content-between">
-                <a href="index.php" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-2"></i> Continue Shopping
-                </a>
-                <a href="account.php" class="btn btn-primary">
-                    <i class="fas fa-user me-2"></i> My Account
-                </a>
-            </div>
-        <?php endif; ?>
+        </div>
+    </nav>
+    
+    <?php if (isset($_SESSION['message'])): ?>
+    <div class="container mt-3">
+        <div class="alert alert-<?php echo $_SESSION['message_type']; ?> alert-dismissible fade show" role="alert">
+            <?php echo $_SESSION['message']; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
     </div>
+    <?php 
+        unset($_SESSION['message']);
+        unset($_SESSION['message_type']);
+    endif; 
+    ?>
+</header>
 
-    <!-- Include footer -->
-    <?php include 'includes/footer.php'; ?>
+<div class="container my-5">
+    <h2 class="mb-4">My Orders</h2>
 
-    <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Custom JS -->
-    <script src="assets/js/main.js"></script>
+    <?php if (empty($orders)): ?>
+        <div class="alert alert-info">
+            You haven't placed any orders yet. <a href="index.php" class="alert-link">Shop now</a>
+        </div>
+    <?php else: ?>
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Order #</th>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <!-- <th>Action</th> -->
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($orders as $order): ?>
+                        <tr>
+                            <td>#<?php echo $order['id']; ?></td>
+                            <td><?php echo date('M j, Y', strtotime($order['created_at'])); ?></td>
+                            <td>$<?php echo number_format($order['total_amount'], 2); ?></td>
+                            <td>
+                                <span class="badge <?php echo getOrderStatusBadgeClass($order['status']); ?>">
+                                    <?php echo ucfirst($order['status']); ?>
+                                </span>
+                            </td>
+                            <!-- <td>
+                                <a href="order_details.php?id=<?php echo $order['id']; ?>" class="btn btn-sm btn-outline-primary">View</a>
+                            </td> -->
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif; ?>
+</div>
+
+<?php include 'includes/footer.php'; ?>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

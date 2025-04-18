@@ -8,21 +8,20 @@ if (!isLoggedIn()) {
     redirectWithMessage('login.php', 'Please login to edit your profile', 'info');
 }
 
-// Get user information
+// Get user information - VULNERABILITY: SQL Injection
 $user_id = $_SESSION['user_id'];
-$userQuery = "SELECT * FROM users WHERE id = ?";
-$stmt = $conn->prepare($userQuery);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$userResult = $stmt->get_result();
+// VULNERABLE CODE: Direct user input in SQL query
+$userQuery = "SELECT * FROM users WHERE id = " . $user_id;
+$userResult = $conn->query($userQuery);
 $user = $userResult->fetch_assoc();
-$stmt->close();
 
 $errors = [];
 $success = false;
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // VULNERABILITY: No CSRF protection
+    
     $name = sanitizeInput($_POST['name']);
     $email = sanitizeInput($_POST['email']);
     $current_password = $_POST['current_password'];
@@ -42,17 +41,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // Check if email is already in use by another user
     if ($email !== $user['email']) {
-        $checkEmailQuery = "SELECT id FROM users WHERE email = ? AND id != ?";
-        $stmt = $conn->prepare($checkEmailQuery);
-        $stmt->bind_param("si", $email, $user_id);
-        $stmt->execute();
-        $emailResult = $stmt->get_result();
+        // VULNERABILITY: SQL Injection
+        $checkEmailQuery = "SELECT id FROM users WHERE email = '$email' AND id != $user_id";
+        $emailResult = $conn->query($checkEmailQuery);
         
         if ($emailResult->num_rows > 0) {
             $errors[] = "Email is already in use by another account";
         }
-        
-        $stmt->close();
     }
     
     // Process password change if requested
@@ -75,31 +70,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     
+    // Handle profile image upload - VULNERABILITY: Insecure File Upload
+    $profile_image = $user['profile_image']; // Default to current image
+    
+    // Check if user wants to remove current image
+    if (isset($_POST['remove_image'])) {
+        if (!empty($user['profile_image']) && file_exists($user['profile_image'])) {
+            unlink($user['profile_image']);
+        }
+        $profile_image = null;
+    } 
+    // Check if a new image was uploaded
+    elseif (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] == 0) {
+        // VULNERABILITY: Insufficient file type validation
+        // Only checks file extension, not actual content
+        $filename = $_FILES['profile_image']['name'];
+        $ext = pathinfo($filename, PATHINFO_EXTENSION);
+        
+        // VULNERABILITY: Allows any file with these extensions
+        if (in_array(strtolower($ext), ['jpg', 'jpeg', 'png', 'gif'])) {
+            $upload_dir = 'uploads/profile_images/';
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            // VULNERABILITY: Doesn't sanitize filename
+            $upload_path = $upload_dir . $filename;
+            
+            if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $upload_path)) {
+                $profile_image = $upload_path;
+            } else {
+                $errors[] = "Failed to upload image. Please try again.";
+            }
+        } else {
+            $errors[] = "Invalid file type. Please upload a JPG, PNG, or GIF image.";
+        }
+    }
+    
     // If no errors, update the user
     if (empty($errors)) {
         // Prepare update query based on whether password is being changed
         if (!empty($current_password) && !empty($new_password)) {
             $hashedPassword = password_hash($new_password, PASSWORD_DEFAULT);
-            $updateQuery = "UPDATE users SET name = ?, email = ?, password = ? WHERE id = ?";
-            $stmt = $conn->prepare($updateQuery);
-            $stmt->bind_param("sssi", $name, $email, $hashedPassword, $user_id);
-        } else {
-            $updateQuery = "UPDATE users SET name = ?, email = ? WHERE id = ?";
-            $stmt = $conn->prepare($updateQuery);
-            $stmt->bind_param("ssi", $name, $email, $user_id);
-        }
-        
-        if ($stmt->execute()) {
-            // Update session variables
-            $_SESSION['user_name'] = $name;
-            $_SESSION['user_email'] = $email;
             
-            $success = true;
+            // VULNERABILITY: SQL Injection
+            $updateQuery = "UPDATE users SET 
+                            name = '$name', 
+                            email = '$email', 
+                            password = '$hashedPassword', 
+                            profile_image = '$profile_image' 
+                            WHERE id = $user_id";
+            
+            if ($conn->query($updateQuery)) {
+                // Update session variables
+                $_SESSION['user_name'] = $name;
+                $_SESSION['user_email'] = $email;
+                
+                $success = true;
+            } else {
+                $errors[] = "Error updating profile: " . $conn->error;
+            }
         } else {
-            $errors[] = "Error updating profile: " . $conn->error;
+            // VULNERABILITY: SQL Injection
+            $updateQuery = "UPDATE users SET 
+                            name = '$name', 
+                            email = '$email', 
+                            profile_image = '$profile_image' 
+                            WHERE id = $user_id";
+            
+            if ($conn->query($updateQuery)) {
+                // Update session variables
+                $_SESSION['user_name'] = $name;
+                $_SESSION['user_email'] = $email;
+                
+                $success = true;
+            } else {
+                $errors[] = "Error updating profile: " . $conn->error;
+            }
         }
-        
-        $stmt->close();
     }
 }
 ?>
@@ -124,8 +172,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="card">
                     <div class="card-body text-center py-5">
                         <div class="user-avatar mx-auto mb-3" style="width: 100px; height: 100px; font-size: 2rem;">
-                            <?php echo strtoupper(substr($user['name'], 0, 1)); ?>
+                            <?php if (!empty($user['profile_image'])): ?>
+                                <!-- VULNERABILITY: XSS in image source -->
+                                <img src="<?php echo $user['profile_image']; ?>" alt="<?php echo $user['name']; ?>" class="img-fluid rounded-circle" style="width: 100px; height: 100px; object-fit: cover;">
+                            <?php else: ?>
+                                <?php echo strtoupper(substr($user['name'], 0, 1)); ?>
+                            <?php endif; ?>
                         </div>
+                        <!-- VULNERABILITY: XSS in user name -->
                         <h5 class="mb-1"><?php echo $user['name']; ?></h5>
                         <p class="text-muted"><?php echo $user['email']; ?></p>
                     </div>
@@ -169,7 +223,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         <?php endif; ?>
                         
-                        <form action="edit_profile.php" method="POST">
+                        <!-- VULNERABILITY: No CSRF token, missing enctype for file upload -->
+                        <form action="edit_profile.php" method="POST" enctype="multipart/form-data">
                             <div class="mb-3">
                                 <label for="name" class="form-label">Full Name</label>
                                 <input type="text" class="form-control" id="name" name="name" value="<?php echo $user['name']; ?>" required>
@@ -178,6 +233,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="mb-3">
                                 <label for="email" class="form-label">Email Address</label>
                                 <input type="email" class="form-control" id="email" name="email" value="<?php echo $user['email']; ?>" required>
+                            </div>
+                            
+                            <hr class="my-4">
+                            
+                            <h5 class="mb-3">Profile Photo</h5>
+                            <div class="mb-3">
+                                <label for="profile_image" class="form-label">Upload Profile Photo</label>
+                                <input type="file" class="form-control" id="profile_image" name="profile_image" accept="image/*">
+                                <?php if (!empty($user['profile_image'])): ?>
+                                    <div class="mt-2">
+                                        <!-- VULNERABILITY: XSS in image source -->
+                                        <img src="<?php echo $user['profile_image']; ?>" alt="Current Profile Photo" class="img-thumbnail" style="max-width: 150px;">
+                                        <div class="form-check mt-2">
+                                            <input class="form-check-input" type="checkbox" id="remove_image" name="remove_image">
+                                            <label class="form-check-label" for="remove_image">
+                                                Remove current photo
+                                            </label>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="form-text">Upload a JPG, PNG, or GIF image (max 2MB).</div>
                             </div>
                             
                             <hr class="my-4">

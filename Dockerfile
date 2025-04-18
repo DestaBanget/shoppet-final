@@ -1,27 +1,22 @@
-FROM php:8.1-apache
+FROM php:8.2-fpm
 
-# Install dependencies
-RUN apt-get update && apt-get install -y \
-    libzip-dev \
-    zip \
-    unzip \
-    && docker-php-ext-install zip pdo_mysql mysqli
+# Install required extensions
+RUN docker-php-ext-install pdo pdo_mysql mysqli
 
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
+# Optional: Tambah timezone (bisa disesuaikan)
+RUN echo "date.timezone=Asia/Jakarta" > /usr/local/etc/php/conf.d/timezone.ini
 
 # Set working directory
 WORKDIR /var/www/html
 
 # Copy application files
-COPY . /var/www/html/
+COPY . /var/www/html
 
-# Set permissions
+# Optional: Permission fix (pastikan user www-data bisa akses)
 RUN chown -R www-data:www-data /var/www/html
 
-# Expose port 80
-EXPOSE 80
+# Expose port for PHP-FPM (nginx akan akses lewat ini secara internal)
+EXPOSE 9000
 
-# Start Apache
-CMD ["apache2-foreground"]
-
+# Start PHP-FPM
+CMD ["php-fpm"]

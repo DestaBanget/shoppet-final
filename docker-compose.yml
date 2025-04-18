@@ -1,58 +1,31 @@
-version: '3'
+version: '3.8'
 
 services:
-  # PHP Application
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: shoppet_app
-    ports:
-      - "8090:80"  # Changed to a less common port
+  php:
+    build: .
     volumes:
       - .:/var/www/html
+    expose:
+      - "9000"
     depends_on:
-      - db
-    networks:
-      - shoppet_network
+      - mysql
 
-  # MySQL Database
-  db:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8081:80"
+    volumes:
+      - .:/var/www/html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - php
+
+  mysql:
     image: mysql:8.0
-    container_name: shoppet_db
-    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: shoppet_db
-      MYSQL_USER: shoppet_user
-      MYSQL_PASSWORD: shoppet_password
     ports:
       - "3307:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
       - ./database.sql:/docker-entrypoint-initdb.d/database.sql
-    networks:
-      - shoppet_network
-
-  # phpMyAdmin (optional)
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin
-    container_name: shoppet_phpmyadmin
-    environment:
-      PMA_HOST: db
-      PMA_PORT: 3306
-      MYSQL_ROOT_PASSWORD: root_password
-    ports:
-      - "8091:80"  # Changed to avoid potential conflicts
-    depends_on:
-      - db
-    networks:
-      - shoppet_network
-
-networks:
-  shoppet_network:
-    driver: bridge
-
-volumes:
-  mysql_data:
-

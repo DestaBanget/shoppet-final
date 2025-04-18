@@ -8,6 +8,11 @@ if (!isLoggedIn()) {
     redirectWithMessage('login.php', 'Please login to view your profile', 'info');
 }
 
+// function isAdmin() {
+//     return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+// }
+
+
 // Get user information
 $user_id = $_SESSION['user_id'];
 $userQuery = "SELECT * FROM users WHERE id = ?";
@@ -19,13 +24,10 @@ $user = $userResult->fetch_assoc();
 $stmt->close();
 
 // Get user's recent orders
-$ordersQuery = "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 5";
-$stmt = $conn->prepare($ordersQuery);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$ordersResult = $stmt->get_result();
+// Rawan SQL Injection
+$ordersQuery = "SELECT * FROM orders WHERE user_id = $user_id ORDER BY created_at DESC LIMIT 1";
+$ordersResult = $conn->query($ordersQuery);
 $orders = $ordersResult->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
 ?>
 
 <!DOCTYPE html>
@@ -63,6 +65,11 @@ $stmt->close();
                         <a href="edit_profile.php" class="list-group-item list-group-item-action">
                             <i class="fas fa-edit me-2"></i>Edit Profile
                         </a>
+                        <?php if (isAdmin()): ?>
+                        <a href="admin/index.php" class="list-group-item list-group-item-action">
+                            <i class="fas fa-cog me-2"></i>Admin Dashboard
+                        </a>
+                        <?php endif; ?>
                         <a href="logout.php" class="list-group-item list-group-item-action text-danger">
                             <i class="fas fa-sign-out-alt me-2"></i>Logout
                         </a>
@@ -84,6 +91,16 @@ $stmt->close();
                         <div class="row mb-3">
                             <div class="col-md-3 fw-bold">Email:</div>
                             <div class="col-md-9"><?php echo $user['email']; ?></div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-3 fw-bold">Role:</div>
+                            <div class="col-md-9">
+                                <?php if (isAdmin()): ?>
+                                    <span class="badge bg-danger">Admin</span>
+                                <?php else: ?>
+                                    <span class="badge bg-primary">Customer</span>
+                                <?php endif; ?>
+                            </div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-3 fw-bold">Member Since:</div>
@@ -115,8 +132,8 @@ $stmt->close();
                                             <th>Order #</th>
                                             <th>Date</th>
                                             <th>Total</th>
-                                            <th>Status</th>
-                                            <th>Action</th>
+                                            <!-- <th>Status</th> -->
+                                            <!-- <th>Action</th> -->
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -126,31 +143,13 @@ $stmt->close();
                                                 <td><?php echo date('M j, Y', strtotime($order['created_at'])); ?></td>
                                                 <td>$<?php echo number_format($order['total_amount'], 2); ?></td>
                                                 <td>
-                                                    <?php
-                                                    switch($order['status']) {
-                                                        case 'pending':
-                                                            echo '<span class="badge bg-warning text-dark">Pending</span>';
-                                                            break;
-                                                        case 'processing':
-                                                            echo '<span class="badge bg-info text-dark">Processing</span>';
-                                                            break;
-                                                        case 'shipped':
-                                                            echo '<span class="badge bg-primary">Shipped</span>';
-                                                            break;
-                                                        case 'delivered':
-                                                            echo '<span class="badge bg-success">Delivered</span>';
-                                                            break;
-                                                        case 'cancelled':
-                                                            echo '<span class="badge bg-danger">Cancelled</span>';
-                                                            break;
-                                                        default:
-                                                            echo '<span class="badge bg-secondary">' . ucfirst($order['status']) . '</span>';
-                                                    }
-                                                    ?>
+                                                    <span class="badge <?php echo getOrderStatusBadgeClass($order['status']); ?>">
+                                                        <?php echo ucfirst($order['status']); ?>
+                                                    </span>
                                                 </td>
-                                                <td>
+                                                <!-- <td>
                                                     <a href="order_details.php?id=<?php echo $order['id']; ?>" class="btn btn-sm btn-outline-primary">View</a>
-                                                </td>
+                                                </td> -->
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -164,8 +163,5 @@ $stmt->close();
     </div>
 
     <?php include 'includes/footer.php'; ?>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="assets/js/main.js"></script>
 </body>
 </html>

@@ -1,0 +1,87 @@
+/* admin_header.css */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #ffffff; /* Set body background to white (primary color) */
+}
+
+.admin-header {
+    background-color: #0d6efd; /* primary blue color */
+    color: #ffffff; /* white text */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 30px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.admin-header .logo {
+    display: flex;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.admin-header .logo i {
+    margin-right: 10px;
+    color: #facc15; /* yellow accent */
+}
+
+.admin-nav ul {
+    list-style: none;
+    display: flex;
+    gap: 20px;
+}
+
+.admin-nav ul li a {
+    color: #ffffff; /* white text */
+    text-decoration: none;
+    padding: 8px 12px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    border-radius: 5px;
+    font-weight: 500;
+}
+
+.admin-nav ul li a:hover {
+    background-color: #0056b3; /* dark blue on hover */
+    color: #facc15; /* yellow on hover */
+}
+
+.admin-nav ul li a.logout {
+    background-color: #dc3545; /* red */
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.admin-nav ul li a.logout:hover {
+    background-color: #c82333; /* darker red */
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 20px;
+    }
+
+    .admin-nav ul {
+        flex-direction: column;
+        width: 100%;
+        margin-top: 10px;
+        gap: 10px;
+    }
+
+    .admin-nav ul li a {
+        width: 100%;
+        display: block;
+    }
+}

@@ -42,6 +42,41 @@ if (isset($_POST['update_cart'])) {
     exit;
 }
 
+// Handle Add to Cart (POST)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add') {
+    $product_id = intval($_POST['product_id']);
+
+    // Ambil detail produk dari database
+    $stmt = $conn->prepare("SELECT * FROM products WHERE id = ?");
+    $stmt->bind_param("i", $product_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $product = $result->fetch_assoc();
+
+    if ($product) {
+        // Jika sudah ada di cart, tambahkan quantity-nya
+        if (isset($_SESSION['cart'][$product_id])) {
+            $_SESSION['cart'][$product_id]['quantity'] += 1;
+        } else {
+            // Tambah produk baru ke cart
+            $_SESSION['cart'][$product_id] = [
+                'name' => $product['name'],
+                'price' => $product['price'],
+                'image' => $product['image'],
+                'quantity' => 1
+            ];
+        }
+
+        $_SESSION['message'] = "Product added to cart!";
+        $_SESSION['message_type'] = "success";
+    }
+
+    // Redirect kembali ke halaman sebelumnya
+    header("Location: " . $_SERVER['HTTP_REFERER']);
+    exit;
+}
+
+
 // Handle remove item
 if (isset($_GET['remove']) && isset($_SESSION['cart'][$_GET['remove']])) {
     unset($_SESSION['cart'][$_GET['remove']]);

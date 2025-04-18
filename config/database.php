@@ -1,12 +1,12 @@
 <?php
 // Database connection parameters
-$host = 'localhost';
+$host = 'mysql';
 $user = 'root';
-$password = '';
-$database = 'shoppet_db';
+$pass = 'root';
+$db = 'shoppet_db';
 
 // Create connection
-$conn = new mysqli($host, $user, $password, $database);
+$conn = new mysqli($host, $user, $pass, $db);
 
 // Check connection
 if ($conn->connect_error) {
