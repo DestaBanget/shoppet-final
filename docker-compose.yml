@@ -29,3 +29,8 @@ services:
       - "3307:3306"
     volumes:
       - ./database.sql:/docker-entrypoint-initdb.d/database.sql
+
+  adminer:
+    image: adminer
+    ports:
+      - "12345:8080"
