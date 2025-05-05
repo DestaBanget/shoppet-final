@@ -81,7 +81,7 @@ $stmt->close();
 // Handle review submission
 if (isset($_POST['submit_review']) && isLoggedIn()) {
     $rating = isset($_POST['rating']) ? intval($_POST['rating']) : 0;
-    $comment = isset($_POST['comment']) ? sanitizeInput($_POST['comment']) : '';
+    $comment = isset($_POST['comment']) ? $_POST['comment'] : '';
     $user_id = $_SESSION['user_id'];
     
     // Validate input
@@ -303,7 +303,7 @@ $avgRating = getAverageRating($product_id, $conn);
                                     </div>
                                 </div>
                             </div>
-                            <p class="mb-0"><?php echo nl2br($review['comment']); ?></p>
+                            <p class="mb-0"><?php echo $review['comment']; ?></p>
                         </div>
                     </div>
                 <?php endwhile; ?>

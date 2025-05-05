@@ -33,7 +33,7 @@ require_once 'functions/utilities.php';
                                 </form>
                             </div>
                             <div class="col-md-5 text-center">
-                                <img src="assets/images/pets-banner.jpg" class="img-fluid rounded" alt="Pets" style="max-height: 300px;">
+                                <img src="http://clipart-library.com/images/gTe58oBac.gif" class="img-fluid rounded" alt="Pets" style="max-height: 300px;">
                             </div>
                         </div>
                     </div>

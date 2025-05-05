@@ -1,0 +1,32 @@
+<psalm errorLevel="5" findUnusedCode="false" findUnusedVariablesAndParams="false" findReferencesToMissingCode="false" reportUnusedCode="false" includeVendorFiles="false">
+    <projectFiles>
+        <directory name="." />
+    </projectFiles>
+
+    <issueHandlers>
+        <!-- Non-Security errors (disabled) -->
+        <UndefinedClass severity="suppress"/>
+        <UnusedVariable severity="suppress"/>
+        <UnusedProperty severity="suppress"/>
+        <PossiblyUnusedMethod severity="suppress"/>
+        <PossiblyUnusedProperty severity="suppress"/>
+        <RedundantCondition severity="suppress"/>
+        <PossiblyUndefinedVariable severity="suppress"/>
+        <MixedAssignment severity="suppress"/>
+        <MixedArgument severity="suppress"/>
+        <MixedPropertyTypeCoercion severity="suppress"/>
+        <MixedMethodCall severity="suppress"/>
+        <MixedReturnTypeCoercion severity="suppress"/>
+        <MixedArrayAccess severity="suppress"/>
+        <TypeDoesNotContainType severity="suppress"/>
+
+        <!-- Focus on Tainted input and potential security issues -->
+        <TaintedInput severity="error"/>
+        <TaintedHtml severity="error"/>
+    </issueHandlers>
+
+    <!-- Removed plugin reference to avoid error -->
+    <!-- <plugins>
+        <plugin filename="vendor/psalm/plugin-taint-analysis/TaintAnalysisPlugin.php"/>
+    </plugins> -->
+</psalm>

@@ -41,67 +41,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = trim($_POST['description']);
     $price = floatval($_POST['price']);
     $stock = intval($_POST['stock']);
-    $category = trim($_POST['category']);
-    
+    $category = intval($_POST['category']);  // Ambil ID kategori
+
     // Validate name
     if (empty($name)) {
         $errors[] = "Product name is required";
     }
-    
+
     // Validate price
     if ($price <= 0) {
         $errors[] = "Price must be greater than zero";
     }
-    
+
     // Validate stock
     if ($stock < 0) {
         $errors[] = "Stock cannot be negative";
     }
-    
+
     // Validate category
     if (empty($category)) {
         $errors[] = "Category is required";
     }
-    
+
     // Handle image upload
     $image_path = $product['image']; // Keep existing image by default
-    
+
     if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
         $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
         $file_type = $_FILES['image']['type'];
-        
+
         if (!in_array($file_type, $allowed_types)) {
             $errors[] = "Invalid file type. Only JPG, PNG, and GIF are allowed.";
         } else {
             $upload_dir = '../uploads/products/';
-            
+
             // Create directory if it doesn't exist
             if (!file_exists($upload_dir)) {
                 mkdir($upload_dir, 0777, true);
             }
-            
+
             $file_name = time() . '_' . basename($_FILES['image']['name']);
             $target_file = $upload_dir . $file_name;
-            
+
             if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
                 // Delete old image if it exists
                 if (!empty($product['image']) && file_exists('../' . $product['image'])) {
                     unlink('../' . $product['image']);
                 }
-                
+
                 $image_path = 'uploads/products/' . $file_name;
             } else {
                 $errors[] = "Failed to upload image.";
             }
         }
     }
-    
+
     // If no errors, update product in database
     if (empty($errors)) {
-        $query = "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, category = ?, image = ? WHERE id = ?";
+        $query = "UPDATE products SET name = ?, description = ?, price = ?, stock = ?, category_id = ?, image = ? WHERE id = ?";
         $stmt = $conn->prepare($query);
         $stmt->bind_param("ssdiisi", $name, $description, $price, $stock, $category, $image_path, $productId);
-        
+
         if ($stmt->execute()) {
             $success = true;
             $_SESSION['success_message'] = "Product updated successfully!";
@@ -120,16 +120,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <title>Edit Product - ShopPet Admin</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
+
     <!-- Bootstrap & Font Awesome -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
-    <?php 
+    <?php
     $admin_path = true;
-    include '../admin/includes/header.php'; 
+    include '../admin/includes/header.php';
     ?>
 
     <div class="container-fluid">
@@ -216,7 +216,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             <div class="mb-3">
                                 <label for="category" class="form-label">Category *</label>
-                                <input type="text" class="form-control" id="category" name="category" value="<?php echo htmlspecialchars($product['category']); ?>" required>
+                                <select class="form-control" id="category" name="category" required>
+                                    <option value="">Select Category</option>
+                                    <?php
+                                    // Ambil daftar kategori dari database
+                                    $categoryQuery = "SELECT * FROM categories";
+                                    $categoryResult = $conn->query($categoryQuery);
+
+                                    // Loop untuk menampilkan kategori sebagai option
+                                    while ($categoryRow = $categoryResult->fetch_assoc()) {
+                                        $selected = ($product['category_id'] == $categoryRow['id']) ? 'selected' : '';
+                                        echo "<option value=\"" . $categoryRow['id'] . "\" $selected>" . htmlspecialchars($categoryRow['name']) . "</option>";
+                                    }
+                                    ?>
+                                </select>
                             </div>
 
                             <div class="mb-3">
@@ -245,4 +258,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php include '../includes/footer.php'; ?>
 </body>
 </html>
-

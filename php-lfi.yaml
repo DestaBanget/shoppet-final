@@ -1,0 +1,18 @@
+rules:
+  - id: php-lfi-detect
+    patterns:
+      - pattern: |
+          include($_GET["$VAR"])
+      - pattern: |
+          include($_POST["$VAR"])
+      - pattern: |
+          include($_REQUEST["$VAR"])
+      - pattern: |
+          require($_GET["$VAR"])
+      - pattern: |
+          require($_POST["$VAR"])
+      - pattern: |
+          require($_REQUEST["$VAR"])
+    message: "Possible LFI (Local File Inclusion) vulnerability using user input."
+    severity: ERROR
+    languages: [php]
