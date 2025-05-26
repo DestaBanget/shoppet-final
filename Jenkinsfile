@@ -4,6 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = "php-web-app"
         TAG = "${BUILD_NUMBER}"
+        KUBECONFIG = "/var/lib/jenkins/.kube/config"
     }
 
     stages {
@@ -13,7 +14,7 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image Locally') {
+        stage('Build Docker Image') {
             steps {
                 sh 'docker build -t ${IMAGE_NAME}:${TAG} .'
             }
@@ -21,7 +22,6 @@ pipeline {
 
         stage('Update Kubernetes Manifests') {
             steps {
-                // Ganti tag image dan imagePullPolicy secara terpisah agar YAML tetap valid
                 sh '''
                     sed -i "s|image:.*php-web-app.*|image: ${IMAGE_NAME}:${TAG}|" kubernetes/deployment.yaml
                     sed -i "s|imagePullPolicy:.*|imagePullPolicy: Never|" kubernetes/deployment.yaml
@@ -32,6 +32,7 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
+                    kubectl apply -f kubernetes/mysql-deployment.yaml
                     kubectl apply -f kubernetes/nginx-config.yaml
                     kubectl apply -f kubernetes/deployment.yaml
                     kubectl apply -f kubernetes/service.yaml
@@ -42,10 +43,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ Web App deployed successfully!"
+            echo "✅ Deployment sukses dengan image tag ${TAG}"
         }
         failure {
-            echo "❌ Deployment failed."
+            echo "❌ Deployment gagal"
         }
     }
 }
