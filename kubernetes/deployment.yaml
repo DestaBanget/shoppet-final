@@ -12,9 +12,18 @@ spec:
       labels:
         app: php-nginx
     spec:
+      initContainers:
+      - name: copy-app-code
+        image: php-web-app:latest
+        imagePullPolicy: Never
+        command: ['sh', '-c', 'cp -r /var/www/html/. /app']
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+
       containers:
       - name: php-fpm
-        image: php-web-app:8
+        image: php-web-app:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 9000
