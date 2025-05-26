@@ -32,10 +32,11 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 sh '''
-                    kubectl apply -f kubernetes/mysql-deployment.yaml
-                    kubectl apply -f kubernetes/nginx-config.yaml
-                    kubectl apply -f kubernetes/deployment.yaml
-                    kubectl apply -f kubernetes/service.yaml
+			kubectl apply --insecure-skip-tls-verify -f kubernetes/mysql-deployment.yaml
+			kubectl apply --insecure-skip-tls-verify -f kubernetes/nginx-config.yaml
+			kubectl apply --insecure-skip-tls-verify -f kubernetes/deployment.yaml
+			kubectl apply --insecure-skip-tls-verify -f kubernetes/service.yaml
+
                 '''
             }
         }
