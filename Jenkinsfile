@@ -21,9 +21,10 @@ pipeline {
 
         stage('Update Kubernetes Manifests') {
             steps {
-                // Ganti tag image dan pastikan imagePullPolicy diset Never
+                // Ganti tag image dan imagePullPolicy secara terpisah agar YAML tetap valid
                 sh '''
-                    sed -i "s|image:.*php-web-app.*|image: ${IMAGE_NAME}:${TAG}\\n          imagePullPolicy: Never|" kubernetes/deployment.yaml
+                    sed -i "s|image:.*php-web-app.*|image: ${IMAGE_NAME}:${TAG}|" kubernetes/deployment.yaml
+                    sed -i "s|imagePullPolicy:.*|imagePullPolicy: Never|" kubernetes/deployment.yaml
                 '''
             }
         }
