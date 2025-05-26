@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: php-fpm
-        image: php-web-app:1
+        image: php-web-app:5
         imagePullPolicy: Never
         ports:
         - containerPort: 9000
@@ -23,6 +23,7 @@ spec:
           mountPath: /var/www/html
       - name: nginx
         image: nginx:1.25
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
         volumeMounts:
