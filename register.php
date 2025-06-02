@@ -54,14 +54,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     
     // If no errors, create the user
     if (empty($errors)) {
-        // Hash the password
         //$hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-	$hashedPassword = $password;
+        $hashedPassword = $password;
         
-        // Insert the user into the database
-        $insertQuery = "INSERT INTO users (name, email, password, created_at) VALUES (?, ?, ?, NOW())";
+        // Insert the user into the database with default role 'user'
+        $defaultRole = 'user';  // Pastikan di database ada role ini untuk user biasa
+
+        $insertQuery = "INSERT INTO users (name, email, password, role, created_at) VALUES (?, ?, ?, ?, NOW())";
         $stmt = $conn->prepare($insertQuery);
-        $stmt->bind_param("sss", $name, $email, $hashedPassword);
+        $stmt->bind_param("ssss", $name, $email, $hashedPassword, $defaultRole);
         
         if ($stmt->execute()) {
             // Registration successful
@@ -70,6 +71,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $errors[] = "Error: " . $stmt->error;
         }
     }
+
     
     $stmt->close();
 }
